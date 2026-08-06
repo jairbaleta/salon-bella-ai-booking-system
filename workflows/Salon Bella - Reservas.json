@@ -1,0 +1,283 @@
+{
+  "name": "Salon Bella - Reservas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reservas",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5a043979-a235-413e-8386-8c4b046095ac",
+      "name": "Recibir Reserva",
+      "webhookId": "94c8f354-b89c-4fb9-8767-534ecfee793c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst fecha = new Date(body.fecha_hora);\nconst fechaFormateada = fecha.toLocaleString('es-CO', {\n  day: '2-digit',\n  month: '2-digit', \n  year: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false,\n  timeZone: 'America/Bogota'\n});\n\nreturn [{\n  json: {\n    nombre_completo: body.nombre_completo,\n    email: body.email,\n    telefono: body.telefono,\n    servicio: body.servicio,\n    fecha_hora: body.fecha_hora,\n    fecha_formateada: fechaFormateada,\n    notas: body.notas || \"\",\n    medio_reserva: \"formulario\",\n    estado: \"confirmada\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d1589b9f-834c-443d-aa3a-4193dc375bec",
+      "name": "Mapear Datos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/clientes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "nombre_completo",
+              "value": "={{ $('Mapear Datos').item.json.nombre_completo }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Mapear Datos').item.json.email }}"
+            },
+            {
+              "name": "telefono",
+              "value": "={{ $('Mapear Datos').item.json.telefono }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "56990185-2107-4f38-acfd-4aa68a4e92de",
+      "name": "Crear o Buscar Cliente"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/citas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cliente_id",
+              "value": "={{ $('Crear o Buscar Cliente').item.json.id }}"
+            },
+            {
+              "name": "servicio_id",
+              "value": "={{ $('Buscar ID Servicio').item.json.id }}"
+            },
+            {
+              "name": "fecha_hora",
+              "value": "={{ $('Mapear Datos').item.json.fecha_hora }}"
+            },
+            {
+              "name": "estado",
+              "value": "={{ $('Mapear Datos').item.json.estado }}"
+            },
+            {
+              "name": "medio_reserva",
+              "value": "={{ $('Mapear Datos').item.json.medio_reserva }}"
+            },
+            {
+              "name": "notas",
+              "value": "={{ $('Mapear Datos').item.json.notas }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "985e6a70-ad97-4b59-a95a-5c666b5f2bb4",
+      "name": "Insertar Cita"
+    },
+    {
+      "parameters": {
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/servicios",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "nombre",
+              "value": "=eq.{{ $('Mapear Datos').item.json.servicio }}"
+            },
+            {
+              "name": "select",
+              "value": "id,nombre"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "037e0cb9-d242-46fe-a6a7-3616c37ed2ed",
+      "name": "Buscar ID Servicio"
+    },
+    {
+      "parameters": {
+        "sendTo": "jaobaleta@gmail.com",
+        "subject": "=Nueva reserva confirmada - {{ $('Mapear Datos').item.json.servicio }}",
+        "message": "=<h2>📢 NUEVA RESERVA CONFIRMADA</h2> <p><strong>💅 Servicio:</strong> {{ $('Mapear Datos').item.json.servicio }}</p> <p><strong>🗓 Fecha y hora:</strong> {{ $('Mapear Datos').item.json.fecha_formateada }}</p> <p><strong>👤 Cliente:</strong> {{ $('Mapear Datos').item.json.nombre_completo }}</p> <p><strong>📞 Teléfono:</strong> {{ $('Mapear Datos').item.json.telefono }}</p> <p><strong>📧 Email:</strong> {{ $('Mapear Datos').item.json.email }}</p> <p><strong>📎 Medio:</strong> {{ $('Mapear Datos').item.json.medio_reserva }}</p> <p><strong>📝 Notas:</strong> {{ $('Mapear Datos').item.json.notas }}</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "9dc419a7-c4cb-4650-bedb-d18a050aeb7c",
+      "name": "Notificar Dueño",
+      "webhookId": "59ab1c39-40ad-4827-9357-f4f4622a8a96"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recibir Reserva": {
+      "main": [
+        [
+          {
+            "node": "Mapear Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Datos": {
+      "main": [
+        [
+          {
+            "node": "Crear o Buscar Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear o Buscar Cliente": {
+      "main": [
+        [
+          {
+            "node": "Buscar ID Servicio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar ID Servicio": {
+      "main": [
+        [
+          {
+            "node": "Insertar Cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Cita": {
+      "main": [
+        [
+          {
+            "node": "Notificar Dueño",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b99229b8-77b2-490c-a2c1-69d7b89f7bfc",
+  "meta": {
+    "instanceId": "53a6dc50675b87aed68ae47af8ee34303ff24b1b4b44d6d7f0b644de3efa0f2d"
+  },
+  "id": "PcCE8wqyjt98k4Wf",
+  "tags": []
+}

@@ -1,0 +1,149 @@
+{
+  "name": "Salon Bella - Recordatorios",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4bd63e4e-3376-467e-af3a-bf8d540896d2",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/citas",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "estado",
+              "value": "eq.confirmada"
+            },
+            {
+              "name": "fecha_hora",
+              "value": "=gte.{{ new Date().toISOString() }}"
+            },
+            {
+              "name": "select",
+              "value": "*,clientes(nombre_completo,email,telefono),servicios(nombre)"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "acf7303f-d1d8-4ed3-a98a-0d9d70ee53f2",
+      "name": "Buscar Citas Proximas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ahora = new Date();\nconst en24horas = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);\n\nconst citas = $input.all();\n\nconst citasFiltradas = citas.filter(cita => {\n  const fechaCita = new Date(cita.json.fecha_hora);\n  return fechaCita >= ahora && fechaCita <= en24horas;\n});\n\nreturn citasFiltradas.map(cita => ({\n  json: {\n    cita_id: cita.json.id,\n    cliente_nombre: cita.json.clientes.nombre_completo,\n    cliente_email: cita.json.clientes.email,\n    cliente_telefono: cita.json.clientes.telefono,\n    servicio: cita.json.servicios.nombre,\n    fecha_hora: cita.json.fecha_hora,\n    fecha_formateada: new Date(cita.json.fecha_hora).toLocaleString('es-CO', {\n      day: '2-digit',\n      month: '2-digit',\n      year: 'numeric',\n      hour: '2-digit',\n      minute: '2-digit',\n      hour12: false,\n      timeZone: 'America/Bogota'\n    }),\n    notas: cita.json.notas\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8d41f349-18b9-4066-acd5-41118893eeaf",
+      "name": "Filtrar 24 Horas"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.cliente_email }}",
+        "subject": "=Recordatorio de tu cita en Salón Bella - {{ $json.servicio }}",
+        "message": "=<h2>⏰ Recordatorio de tu cita</h2> <p>Hola <strong>{{ $json.cliente_nombre }}</strong>,</p> <p>Te recordamos que tenés una cita agendada en <strong>Salón Bella</strong>:</p> <p><strong>💅 Servicio:</strong> {{ $json.servicio }}</p> <p><strong>🗓 Fecha y hora:</strong> {{ $json.fecha_formateada }}</p> <p><strong>📍 Dirección:</strong> Salón Bella</p> <p>Si necesitás cancelar o reprogramar tu cita, contactanos con anticipación.</p> <p>¡Te esperamos! 💕</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "8d520d40-8a9e-461c-9237-74e4162ee35a",
+      "name": "Enviar Recordatorio",
+      "webhookId": "25a4ae1c-8fcd-4460-9d2f-daa71e8f733f"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscar Citas Proximas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Citas Proximas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar 24 Horas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar 24 Horas": {
+      "main": [
+        [
+          {
+            "node": "Enviar Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "69c81d58-cd98-4719-b5b4-0af5f074640d",
+  "meta": {
+    "instanceId": "53a6dc50675b87aed68ae47af8ee34303ff24b1b4b44d6d7f0b644de3efa0f2d"
+  },
+  "id": "5vv0fCLtHbEGf7gF",
+  "tags": []
+}

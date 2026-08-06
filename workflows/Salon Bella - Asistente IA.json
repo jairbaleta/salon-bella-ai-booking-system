@@ -1,0 +1,466 @@
+{
+  "name": "Salon Bella - Asistente IA",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "asistente",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1472,
+        96
+      ],
+      "id": "028b44be-54a3-466f-a254-38f179e520ba",
+      "name": "Recibir Mensaje",
+      "webhookId": "18ab665c-ddac-4a92-9de1-b3ff69b2f4bb"
+    },
+    {
+      "parameters": {
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/servicios",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "activo",
+              "value": "eq.true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1248,
+        96
+      ],
+      "id": "b623d50b-dce0-497d-a877-3c22937f32ed",
+      "name": "Obtener Servicios"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mensaje = $('Recibir Mensaje').item.json.body.mensaje;\nconst historial = $('Recibir Mensaje').item.json.body.historial || [];\nconst servicios = $('Obtener Servicios').all();\n\nconst listaServicios = servicios.map(s => \n  `- ${s.json.nombre} (${s.json.duracion_minutos} min, $${s.json.precio})`\n).join('\\n');\n\nconst prompt = `Eres un asistente virtual de Salón Bella, un salón de belleza profesional.\nTu objetivo es ayudar a los clientes a reservar citas de forma conversacional y amigable.\n\nServicios disponibles:\n${listaServicios}\n\nDatos que necesitás recopilar para completar una reserva:\n1. Nombre completo del cliente\n2. Teléfono\n3. Email\n4. Servicio deseado (debe ser uno de la lista)\n5. Fecha (debe ser futura, el año actual es 2026)\n6. Hora (en formato HH:MM, zona horaria Colombia UTC-5, NO conviertas a UTC)\n\nReglas importantes:\n- Sé amigable y usa emojis ocasionalmente\n- Si el cliente menciona un servicio que no existe, sugerí los disponibles\n- Cuando tengas TODOS los datos, respondé ÚNICAMENTE con este JSON exacto:\n{\n  \"accion\": \"registrar_cita\",\n  \"nombre_completo\": \"\",\n  \"email\": \"\",\n  \"telefono\": \"\",\n  \"servicio\": \"\",\n  \"fecha_hora\": \"YYYY-MM-DDTHH:MM:00-05:00\",\n  \"notas\": \"\"\n}\n- Si aún faltan datos, seguí la conversación naturalmente\n- No inventes datos que el cliente no proporcionó`;\n\nreturn [{\n  json: {\n    prompt,\n    mensaje,\n    historial\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        96
+      ],
+      "id": "f908bd42-80bd-4d43-b11c-a7e98e4f0703",
+      "name": "Preparar Contexto"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        96
+      ],
+      "id": "aec898c7-ff08-4aec-b3b8-327c28e772ff",
+      "name": "Llamar IA",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuesta = $('Llamar IA').item.json.content.parts[0].text;\n\nlet accion = null;\ntry {\n  const jsonMatch = respuesta.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    if (parsed.accion === 'registrar_cita') {\n      accion = parsed;\n    }\n  }\n} catch (e) {\n  // No es JSON, es una respuesta conversacional\n}\n\nreturn [{\n  json: {\n    respuesta_texto: accion ? null : respuesta,\n    accion: accion,\n    debe_registrar: accion !== null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        96
+      ],
+      "id": "096cffd8-11e7-4ae9-b862-39faccff71d3",
+      "name": "Procesar Respuesta IA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "20d578ae-0533-4c60-b0e7-c2b2ac65a11d",
+              "leftValue": "={{ $json.debe_registrar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        96
+      ],
+      "id": "f4607a1f-f4c9-4ddb-9822-a675999685af",
+      "name": "¿Registrar Cita?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/clientes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "nombre_completo",
+              "value": "={{ $('Procesar Respuesta IA').item.json.accion.nombre_completo }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Procesar Respuesta IA').item.json.accion.email }}"
+            },
+            {
+              "name": "telefono",
+              "value": "={{ $('Procesar Respuesta IA').item.json.accion.telefono }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6c93ad25-defe-49ee-b37f-c669a49bb26d",
+      "name": "Crear Cliente IA"
+    },
+    {
+      "parameters": {
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/servicios",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "nombre",
+              "value": "=eq.{{ $('Procesar Respuesta IA').item.json.accion.servicio }}"
+            },
+            {
+              "name": "select",
+              "value": "id,nombre"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "20162814-bf16-417d-896d-890b88452242",
+      "name": "Buscar ID Servicio IA"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/citas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cliente_id",
+              "value": "={{ $('Crear Cliente IA').item.json.id }}"
+            },
+            {
+              "name": "servicio_id",
+              "value": "={{ $('Buscar ID Servicio IA').item.json.id }}"
+            },
+            {
+              "name": "fecha_hora",
+              "value": "={{ $('Procesar Respuesta IA').item.json.accion.fecha_hora }}"
+            },
+            {
+              "name": "estado",
+              "value": "confirmada"
+            },
+            {
+              "name": "medio_reserva",
+              "value": "asistente IA"
+            },
+            {
+              "name": "notas",
+              "value": "={{ $('Procesar Respuesta IA').item.json.accion.notas }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "7dc5339c-beef-4031-9b36-62075ab500d5",
+      "name": "Insertar Cita IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "const accion = $('Procesar Respuesta IA').item.json.accion;\nconst servicio = $('Buscar ID Servicio IA').item.json.nombre;\n\nconst fecha = new Date(accion.fecha_hora);\nconst fechaFormateada = fecha.toLocaleString('es-CO', {\n  day: '2-digit',\n  month: 'long',\n  year: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false,\n  timeZone: 'America/Bogota'\n});\n\nreturn [{\n  json: {\n    respuesta: `✅ ¡Tu reserva ha sido confirmada!\\n\\n💅 Servicio: ${servicio}\\n🗓 Fecha y hora: ${fechaFormateada}\\n👤 Cliente: ${accion.nombre_completo}\\n📍 Salón Bella\\n\\nRecibirás un recordatorio automático antes del turno. ¡Te esperamos! 💕`,\n    cita_registrada: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "52b1f3f5-f61a-4b80-b475-17bd955f86f6",
+      "name": "Respuesta Confirmacion"
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuesta = $('Procesar Respuesta IA').item.json.respuesta_texto;\n\nreturn [{\n  json: {\n    respuesta: respuesta,\n    cita_registrada: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "id": "cf58a6d0-2676-4406-b661-f1d3b8475cb7",
+      "name": "Respuesta Conversacional"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"respuesta\": $json.respuesta, \"cita_registrada\": $json.cita_registrada } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        96
+      ],
+      "id": "c9a27ef0-2c82-4d35-923b-ed2271a0d87f",
+      "name": "Responder Cliente"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recibir Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Obtener Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Servicios": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Respuesta IA": {
+      "main": [
+        [
+          {
+            "node": "¿Registrar Cita?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Registrar Cita?": {
+      "main": [
+        [
+          {
+            "node": "Crear Cliente IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Conversacional",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Cliente IA": {
+      "main": [
+        [
+          {
+            "node": "Buscar ID Servicio IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar ID Servicio IA": {
+      "main": [
+        [
+          {
+            "node": "Insertar Cita IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Cita IA": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Confirmacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Confirmacion": {
+      "main": [
+        [
+          {
+            "node": "Responder Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Conversacional": {
+      "main": [
+        [
+          {
+            "node": "Responder Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0eacdac7-9e3f-4a52-b40e-46a1b11ad498",
+  "meta": {
+    "instanceId": "53a6dc50675b87aed68ae47af8ee34303ff24b1b4b44d6d7f0b644de3efa0f2d"
+  },
+  "id": "98gwfn29JwwDOaHG",
+  "tags": []
+}

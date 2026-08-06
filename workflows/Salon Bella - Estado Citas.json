@@ -1,0 +1,101 @@
+{
+  "name": "Salon Bella - Estado Citas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "estado-cita",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        -112
+      ],
+      "id": "be671d36-06c7-4a04-b61e-92c166d12c65",
+      "name": "Recibir Cambio Estado",
+      "webhookId": "2fa4bf2a-8123-4929-8ab9-a595b8f7b40f"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://utlmrvzzhlvfbsmsnxpx.supabase.co/rest/v1/citas",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "=eq.{{ $json.body.cita_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SUPABASE_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "estado",
+              "value": "={{ $json.body.estado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        -112
+      ],
+      "id": "2c194248-fec4-4de0-90cd-a0304fc8be35",
+      "name": "Actualizar Estado"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recibir Cambio Estado": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cb611222-0e1a-474d-a164-3f4e8b774a08",
+  "meta": {
+    "instanceId": "53a6dc50675b87aed68ae47af8ee34303ff24b1b4b44d6d7f0b644de3efa0f2d"
+  },
+  "id": "sKvPK57lpVCNTNOY",
+  "tags": []
+}
