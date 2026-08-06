@@ -126,9 +126,45 @@ Email automático
 
 ---
 
-# 🏗️ Arquitectura del sistema
+# 🏗️ Arquitectura y Workflows
+
+## Arquitectura general del sistema
+
+> El sistema integra una aplicación web desarrollada en Lovable, una base de datos en Supabase, múltiples workflows en n8n y un asistente basado en Google Gemini para automatizar el ciclo completo de reservas, recordatorios y gestión de citas.
 
 ![Arquitectura](images/architecture.png)
+
+---
+
+## 📅 Workflow - Gestión de Reservas
+
+Este workflow recibe las solicitudes provenientes del formulario web, registra o actualiza el cliente en Supabase, crea la cita y notifica automáticamente al administrador.
+
+![Workflow Booking](images/workflow-booking.png)
+
+---
+
+## 🤖 Workflow - Asistente IA
+
+Este workflow implementa un asistente conversacional utilizando Google Gemini. Interpreta la intención del usuario, recopila la información necesaria y registra automáticamente la reserva cuando dispone de todos los datos.
+
+![Workflow AI Assistant](images/workflow-ai-assistant.png)
+
+---
+
+## ⏰ Workflow - Recordatorios Automáticos
+
+Se ejecuta cada hora para identificar las citas programadas dentro de las próximas 24 horas y enviar recordatorios automáticos por correo electrónico.
+
+![Workflow Reminders](images/workflow-reminders.png)
+
+---
+
+## 🔄 Workflow - Actualización de Estado
+
+Permite actualizar automáticamente el estado de las citas (confirmada, cancelada o completada) desde el panel administrativo.
+
+![Workflow Status Update](images/workflow-status-update.png)
 
 ---
 
